@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="LAKSI">
+<meta name="theme-color" content="#e94560">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>LAKSI LIFE DASHBOARD</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Segoe UI',system-ui,sans-serif; background:#0a0a0f; color:#e0e0e0; min-height:100vh; }
+.header { background:linear-gradient(135deg,#1a1a2e,#16213e); padding:20px 30px; display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #e94560; }
+.header h1 { font-size:24px; color:#e94560; letter-spacing:2px; }
+.header .date { color:#888; font-size:14px; }
+.grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:16px; padding:20px; }
+.card { background:#1a1a2e; border-radius:12px; padding:20px; border:1px solid #2a2a4a; }
+.card h2 { font-size:14px; text-transform:uppercase; letter-spacing:1px; color:#888; margin-bottom:12px; }
+.card h3 { font-size:12px; text-transform:uppercase; letter-spacing:1px; color:#e94560; margin:16px 0 8px 0; }
+.card .big-number { font-size:48px; font-weight:700; }
+.green { color:#00e676; }
+.red { color:#e94560; }
+.orange { color:#ff9800; }
+.blue { color:#448aff; }
+.gold { color:#ffd700; }
+.progress-bar { background:#2a2a4a; border-radius:8px; height:12px; margin:8px 0; overflow:hidden; }
+.progress-fill { height:100%; border-radius:8px; transition:width 0.5s; }
+.stat-row { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #2a2a4a; }
+.stat-row:last-child { border:none; }
+.stat-label { color:#888; }
+.checklist { list-style:none; }
+.checklist li { padding:6px 0; display:flex; align-items:center; gap:8px; cursor:pointer; user-select:none; }
+.checklist li.done { color:#00e676; text-decoration:line-through; opacity:0.7; }
+.checklist li.done-malus { color:#e94560; text-decoration:line-through; opacity:0.7; }
+.checklist li::before { content:'○'; color:#555; font-size:18px; min-width:18px; }
+.checklist li.done::before { content:'●'; color:#00e676; }
+.checklist li.done-malus::before { content:'●'; color:#e94560; }
+.streak-badge { display:inline-block; background:#2a2a4a; padding:6px 14px; border-radius:20px; font-size:12px; margin:3px; }
+.streak-badge.active { background:#1b5e20; color:#00e676; border:1px solid #00e676; }
+.full-width { grid-column:1/-1; }
+.mini-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
+.day-cell { aspect-ratio:1; border-radius:4px; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:600; }
+.input-row { display:flex; gap:8px; margin:8px 0; align-items:center; }
+.input-row input { background:#2a2a4a; border:1px solid #3a3a5a; color:#e0e0e0; padding:8px 12px; border-radius:6px; width:60px; text-align:center; font-size:16px; }
+.input-row label { color:#888; font-size:13px; flex:1; }
+.btn { background:#e94560; color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-size:14px; font-weight:600; }
+.btn:hover { background:#c73550; }
+.btn-save { background:#1b5e20; }
+.btn-save:hover { background:#2e7d32; }
+.health-alert { background:#4a0000; border:2px solid #e94560; border-radius:12px; padding:16px; margin:20px; }
+.health-alert h2 { color:#e94560; margin-bottom:8px; }
+.claude-tag { background:#e94560; color:white; font-size:10px; padding:2px 6px; border-radius:4px; margin-left:6px; vertical-align:middle; }
+</style>
+</head>
+<body>
+
+<div class="header">
+<h1>LAKSI LIFE SYSTEM</h1>
+<div class="date" id="currentDate"></div>
+</div>
+
+<div class="health-alert">
+<h2>ALERTE SANTE CARDIAQUE</h2>
+<p>Ton frere est mort a 34 ans d'une crise cardiaque. Ton pere a eu 2 AVC. Tu as 34 ans. 7 Red Bull + clopes + 91 kg + 1 verre d'eau/jour + pregabaline = DANGER. Chaque point gagne te rapproche de la vie, pas juste du poker.</p>
+</div>
+
+<div class="grid">
+
+<!-- SCORE DU JOUR -->
+<div class="card">
+<h2>Score du jour</h2>
+<div class="big-number green" id="todayScore">0</div>
+<div style="color:#888;margin-top:4px">sur 68 max (avec 13 clopes) / 81 max (0 clopes)</div>
+<div class="progress-bar"><div class="progress-fill" id="scoreBar" style="width:0%;background:#00e676"></div></div>
+<div style="margin-top:8px">
+<div class="stat-row"><span class="stat-label">Objectif semaine 1</span><span class="blue">20-25 pts/jour</span></div>
+</div>
+</div>
+
+<!-- BANKROLL POKER -->
+<div class="card">
+<h2>Bankroll Poker</h2>
+<div class="big-number gold" id="bankroll">0 EUR</div>
+<div style="margin-top:8px">
+<div class="stat-row"><span class="stat-label">Objectif</span><span>3,000 EUR (50 buy-ins 1/3)</span></div>
+<div class="progress-bar"><div class="progress-fill" id="bankrollBar" style="width:0%;background:#ffd700"></div></div>
+<div class="stat-row"><span class="stat-label">Status</span><span class="red" id="bankrollStatus">BLOQUE</span></div>
+<div class="stat-row"><span class="stat-label">Buy-ins</span><span id="buyins">0 / 50</span></div>
+<div class="stat-row"><span class="stat-label">Jours positifs consecutifs</span><span id="positiveDays">0</span></div>
+</div>
+</div>
+
+<!-- POIDS -->
+<div class="card">
+<h2>Poids & Body</h2>
+<div class="input-row">
+<label>Poids (kg)</label>
+<input type="number" id="weightInput" value="91" min="50" max="150" step="0.1">
+</div>
+<div class="progress-bar"><div class="progress-fill" id="weightBar" style="width:80%;background:#ff9800"></div></div>
+<div class="stat-row"><span class="stat-label">Objectif</span><span>74-77 kg</span></div>
+<div class="stat-row"><span class="stat-label">A perdre</span><span class="red" id="toLose">~15 kg</span></div>
+<div class="stat-row"><span class="stat-label">Objectif/semaine</span><span>-1 kg</span></div>
+<div class="input-row" style="margin-top:8px">
+<label>Body Fat %</label>
+<input type="number" id="bfInput" value="33" min="5" max="50" step="0.1">
+</div>
+<div class="input-row">
+<label>Eau %</label>
+<input type="number" id="waterPctInput" value="50" min="30" max="80" step="0.1">
+</div>
+<div class="input-row">
+<label>Muscle %</label>
+<input type="number" id="musclePctInput" value="54" min="30" max="70" step="0.1">
+</div>
+</div>
+
+<!-- ADDICTIONS -->
+<div class="card">
+<h2>Addictions</h2>
+<div class="input-row">
+<label>Red Bull bus</label>
+<input type="number" id="redbullCount" value="0" min="0" max="20">
+<span id="redbullPts" class="green">+1</span>
+</div>
+<div class="input-row">
+<label>Cigarettes fumees</label>
+<input type="number" id="cigsCount" value="0" min="0" max="40">
+<span id="cigsPts" class="green">+13</span>
+</div>
+<div class="input-row">
+<label>Eau (litres)</label>
+<input type="number" id="waterCount" value="0" min="0" max="10" step="0.5">
+<span id="waterPts" class="red">-2</span>
+</div>
+<div class="input-row">
+<label>Pregabaline prise</label>
+<input type="number" id="pregCount" value="0" min="0" max="5">
+<span id="pregPts" class="green">+1</span>
+</div>
+<div style="margin-top:12px;">
+<div class="stat-row"><span class="stat-label">Cout Red Bull aujourd'hui</span><span class="red" id="rbCost">0 EUR</span></div>
+<div class="stat-row"><span class="stat-label">Cout Clopes aujourd'hui</span><span class="red" id="cigCost">0 EUR</span></div>
+<div class="stat-row"><span class="stat-label">Projection brulure/mois</span><span class="red" id="monthBurn">780 EUR</span></div>
+</div>
+</div>
+
+<!-- CHECKLIST MATIN -->
+<div class="card">
+<h2>Matin (+7 max)</h2>
+<ul class="checklist" id="morningList">
+<li data-pts="1" onclick="toggleCheck(this)">Reveil avant 6h30</li>
+<li data-pts="1" onclick="toggleCheck(this)">Verre d'eau au lever</li>
+<li data-pts="1" onclick="toggleCheck(this)">Petit-dej avec proteines</li>
+<li data-pts="1" onclick="toggleCheck(this)">Brosser dents matin</li>
+<li data-pts="1" onclick="toggleCheck(this)">Douche matin</li>
+<li data-pts="1" onclick="toggleCheck(this)">Pas de clope avant daily 9h</li>
+<li data-pts="1" onclick="toggleCheck(this)">Gamelle au taf</li>
+</ul>
+</div>
+
+<!-- CHECKLIST TRAVAIL -->
+<div class="card">
+<h2>Travail (+13 max)</h2>
+<ul class="checklist" id="workList">
+<li data-pts="1" onclick="toggleCheck(this)">Daily 9h a l'heure</li>
+<li data-pts="1" onclick="toggleCheck(this)">Toutes les taches finies</li>
+<li data-pts="1" onclick="toggleCheck(this)">15 min AI/VULCAN</li>
+<li data-pts="1" onclick="toggleCheck(this)">1h formation</li>
+<li data-pts="10" onclick="toggleCheck(this)">0 EUR depense</li>
+</ul>
+</div>
+
+<!-- CHECKLIST SANTE -->
+<div class="card">
+<h2>Sante (+1 sport)</h2>
+<ul class="checklist" id="healthList">
+<li data-pts="1" onclick="toggleCheck(this)">Sport (meme 20 min marche)</li>
+<li data-pts="1" onclick="toggleCheck(this)">Etirements 10 min <span class="claude-tag">CLAUDE</span></li>
+<li data-pts="1" onclick="toggleCheck(this)">Marcher 30 min DEHORS <span class="claude-tag">CLAUDE</span></li>
+<li data-pts="1" onclick="toggleCheck(this)">Escaliers (pas ascenseur) <span class="claude-tag">CLAUDE</span></li>
+</ul>
+</div>
+
+<!-- CHECKLIST SPIRITUALITE -->
+<div class="card">
+<h2>Spiritualite (+10 max)</h2>
+<ul class="checklist" id="spiritList">
+<li data-pts="10" onclick="toggleCheck(this)">5 prieres dans les temps</li>
+</ul>
+<h3>Education (+3 max)</h3>
+<ul class="checklist" id="eduList">
+<li data-pts="1" onclick="toggleCheck(this)">5 pages Coran</li>
+<li data-pts="1" onclick="toggleCheck(this)">5 min Duolingo</li>
+<li data-pts="1" onclick="toggleCheck(this)">10 min lecture (livre, pas phone) <span class="claude-tag">CLAUDE</span></li>
+</ul>
+</div>
+
+<!-- CHECKLIST SOIR -->
+<div class="card">
+<h2>Soir & Hygiene (+7 max)</h2>
+<ul class="checklist" id="eveningList">
+<li data-pts="1" onclick="toggleCheck(this)">Gamelle du lendemain</li>
+<li data-pts="1" onclick="toggleCheck(this)">Brosser dents soir</li>
+<li data-pts="1" onclick="toggleCheck(this)">Douche soir</li>
+<li data-pts="1" onclick="toggleCheck(this)">30 min sans ecran avant dormir</li>
+<li data-pts="1" onclick="toggleCheck(this)">Au lit avant minuit</li>
+<li data-pts="1" onclick="toggleCheck(this)">Dormi au moins 6h</li>
+<li data-pts="1" onclick="toggleCheck(this)">8h sans telephone (dans la journee)</li>
+</ul>
+</div>
+
+<!-- CHECKLIST RELATIONS -->
+<div class="card">
+<h2>Relations (+3 max)</h2>
+<ul class="checklist" id="relList">
+<li data-pts="1" onclick="toggleCheck(this)">Appel maman</li>
+<li data-pts="1" onclick="toggleCheck(this)">Appel copine</li>
+<li data-pts="1" onclick="toggleCheck(this)">Appel papa</li>
+</ul>
+<h3>Ajouts Claude (+5 max)</h3>
+<ul class="checklist" id="claudeList">
+<li data-pts="2" onclick="toggleCheck(this)">Cuisiner un VRAI repas (proteine+legume) <span class="claude-tag">CLAUDE +2</span></li>
+<li data-pts="2" onclick="toggleCheck(this)">Pas de depense en cash (tout carte) <span class="claude-tag">CLAUDE +2</span></li>
+<li data-pts="1" onclick="toggleCheck(this)">3 choses pour lesquelles tu es reconnaissant <span class="claude-tag">CLAUDE</span></li>
+</ul>
+<h3>Admin (+3)</h3>
+<ul class="checklist" id="adminList">
+<li data-pts="3" onclick="toggleCheck(this)">1 tache administrative (impots/naturalisation/dossier) <span class="claude-tag">CLAUDE +3</span></li>
+</ul>
+</div>
+
+<!-- MALUS -->
+<div class="card">
+<h2>Malus (coche si tu l'as fait)</h2>
+<ul class="checklist" id="malusList">
+<li data-pts="-5" onclick="toggleMalus(this)">Achat impulsif (-5)</li>
+<li data-pts="-3" onclick="toggleMalus(this)">Uber Eats commande (-3)</li>
+<li data-pts="-200" onclick="toggleMalus(this)">Casino Sanremo ou online (-200)</li>
+<li data-pts="-50" onclick="toggleMalus(this)">Crypto achat speculatif (-50)</li>
+<li data-pts="-5" onclick="toggleMalus(this)">Retard au daily (-5)</li>
+<li data-pts="-3" onclick="toggleMalus(this)">CS2 plus de 2h en semaine (-3)</li>
+<li data-pts="-5" onclick="toggleMalus(this)">Repondu a l'ex (-5)</li>
+<li data-pts="-3" onclick="toggleMalus(this)">Telephone plus de 4h hors taf (-3)</li>
+<li data-pts="-3" onclick="toggleMalus(this)">Couche apres 1h (sauf ven/sam) (-3) <span class="claude-tag">CLAUDE</span></li>
+<li data-pts="-5" onclick="toggleMalus(this)">Pas prie dans 30 min apres retour (-5)</li>
+<li data-pts="-2" onclick="toggleMalus(this)">Saute un repas (-2) <span class="claude-tag">CLAUDE</span></li>
+<li data-pts="-1" onclick="toggleMalus(this)">Pas brosse les dents (-1)</li>
+</ul>
+</div>
+
+<!-- FINANCES -->
+<div class="card">
+<h2>Finances mensuelles</h2>
+<div class="stat-row"><span class="stat-label">Salaire net</span><span class="green">+3,200 EUR</span></div>
+<div class="stat-row"><span class="stat-label">Charges fixes</span><span class="red">-1,930 EUR</span></div>
+<div class="stat-row"><span class="stat-label">Red Bull (7/j x 2.30 EUR)</span><span class="red">-483 EUR</span></div>
+<div class="stat-row"><span class="stat-label">Clopes (1 pack/j x 7 EUR Italie)</span><span class="red">-210 EUR</span></div>
+<div class="stat-row"><span class="stat-label">Reste libre</span><span class="orange">577 EUR</span></div>
+<div style="margin-top:12px;border-top:1px solid #2a2a4a;padding-top:12px">
+<h3>Si tu suis le systeme</h3>
+<div class="stat-row"><span class="stat-label">Red Bull 1/j au lieu de 7</span><span class="green">+414 EUR</span></div>
+<div class="stat-row"><span class="stat-label">13 clopes/j au lieu de 20</span><span class="green">+73 EUR</span></div>
+<div class="stat-row"><span class="stat-label">0 casino + 0 crypto</span><span class="green">+990 EUR</span></div>
+<div class="stat-row"><span class="stat-label"><b>Economie potentielle</b></span><span class="gold"><b>+1,477 EUR/mois</b></span></div>
+</div>
+</div>
+
+<!-- DETTES -->
+<div class="card">
+<h2>Dettes & Legal</h2>
+<div class="stat-row"><span class="stat-label">BNP</span><span class="red">42,000 EUR</span></div>
+<div class="stat-row"><span class="stat-label">Remboursement BNP</span><span>300 EUR/mois</span></div>
+<div class="stat-row"><span class="stat-label">URSSAF</span><span>200 EUR/mois</span></div>
+<div class="stat-row"><span class="stat-label">Interdit bancaire</span><span class="red">jusqu'a Jan 2030</span></div>
+<div class="stat-row"><span class="stat-label">Proces Algerie</span><span class="orange">15K-30K EUR</span></div>
+<div class="stat-row"><span class="stat-label">Impots pro</span><span class="red">4 ans non declares</span></div>
+<div class="stat-row"><span class="stat-label">Test civique</span><span class="orange">Rate 31/40, repasse dans 2 mois</span></div>
+</div>
+
+<!-- STREAKS -->
+<div class="card">
+<h2>Streaks en cours</h2>
+<div id="streaksContainer">
+<div class="streak-badge" id="streak-sport">Sport: 0/7 (+50)</div>
+<div class="streak-badge" id="streak-rb">0 Red Bull: 0/7 (+50)</div>
+<div class="streak-badge" id="streak-money">0 EUR depense: 0/7 (+100)</div>
+<div class="streak-badge" id="streak-prayer">5 prieres: 0/7 (+30)</div>
+<div class="streak-badge" id="streak-mosque">Mosquee vendredi (+10)</div>
+</div>
+</div>
+
+<!-- HISTORIQUE -->
+<div class="card full-width">
+<h2>Historique 30 jours</h2>
+<div class="mini-grid" id="historyGrid"></div>
+<div style="margin-top:8px;display:flex;gap:16px;font-size:12px;color:#888;flex-wrap:wrap">
+<span><span style="display:inline-block;width:12px;height:12px;background:#1a1a2e;border-radius:2px;vertical-align:middle"></span> Pas de donnee</span>
+<span><span style="display:inline-block;width:12px;height:12px;background:#4a0000;border-radius:2px;vertical-align:middle"></span> 0 pts</span>
+<span><span style="display:inline-block;width:12px;height:12px;background:#4a3f00;border-radius:2px;vertical-align:middle"></span> 1-14 pts</span>
+<span><span style="display:inline-block;width:12px;height:12px;background:#1b5e20;border-radius:2px;vertical-align:middle"></span> 15-29 pts</span>
+<span><span style="display:inline-block;width:12px;height:12px;background:#2e7d32;border-radius:2px;vertical-align:middle"></span> 30+ pts</span>
+</div>
+</div>
+
+<!-- SAVE -->
+<div class="card full-width" style="text-align:center">
+<button class="btn btn-save" onclick="saveDay()" style="font-size:18px;padding:14px 40px">
+SAUVEGARDER LA JOURNEE
+</button>
+<p style="color:#888;margin-top:8px;font-size:12px">Sauvegarde dans ton navigateur (localStorage). Ouvre ce fichier chaque soir.</p>
+</div>
+
+</div>
+
+<script>
+const today = new Date();
+document.getElementById('currentDate').textContent = today.toLocaleDateString('fr-FR',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+
+function toggleCheck(el) {
+  el.classList.toggle('done');
+  el.classList.remove('done-malus');
+  updateScore();
+}
+
+function toggleMalus(el) {
+  el.classList.toggle('done-malus');
+  el.classList.remove('done');
+  updateScore();
+}
+
+function updateScore() {
+  let total = 0;
+
+  // Bonus checklists
+  document.querySelectorAll('.checklist li.done').forEach(li => {
+    total += parseInt(li.dataset.pts);
+  });
+
+  // Malus checklists
+  document.querySelectorAll('.checklist li.done-malus').forEach(li => {
+    total += parseInt(li.dataset.pts);
+  });
+
+  // Red Bull
+  const rb = parseInt(document.getElementById('redbullCount').value) || 0;
+  if (rb <= 1) {
+    total += 1;
+    document.getElementById('redbullPts').textContent = '+1';
+    document.getElementById('redbullPts').className = 'green';
+  } else {
+    const penalty = (rb - 1) * -3;
+    total += penalty;
+    document.getElementById('redbullPts').textContent = penalty;
+    document.getElementById('redbullPts').className = 'red';
+  }
+  document.getElementById('rbCost').textContent = (rb * 2.3).toFixed(1) + ' EUR';
+
+  // Cigarettes
+  const cigs = parseInt(document.getElementById('cigsCount').value) || 0;
+  if (cigs <= 13) {
+    const bonus = 13 - cigs;
+    total += bonus;
+    document.getElementById('cigsPts').textContent = '+' + bonus;
+    document.getElementById('cigsPts').className = 'green';
+  } else {
+    const penalty = (cigs - 13) * -1;
+    total += penalty;
+    document.getElementById('cigsPts').textContent = penalty;
+    document.getElementById('cigsPts').className = 'red';
+  }
+  document.getElementById('cigCost').textContent = (cigs * 0.35).toFixed(1) + ' EUR';
+
+  // Water
+  const water = parseFloat(document.getElementById('waterCount').value) || 0;
+  if (water >= 1.5) {
+    total += 1;
+    document.getElementById('waterPts').textContent = '+1';
+    document.getElementById('waterPts').className = 'green';
+  } else {
+    total -= 2;
+    document.getElementById('waterPts').textContent = '-2';
+    document.getElementById('waterPts').className = 'red';
+  }
+
+  // Pregabaline
+  const preg = parseInt(document.getElementById('pregCount').value) || 0;
+  if (preg === 0) {
+    total += 1;
+    document.getElementById('pregPts').textContent = '+1';
+    document.getElementById('pregPts').className = 'green';
+  } else {
+    document.getElementById('pregPts').textContent = '0';
+    document.getElementById('pregPts').className = 'orange';
+  }
+
+  // Monthly burn projection
+  const monthRb = rb * 2.3 * 30;
+  const monthCig = cigs * 0.35 * 30;
+  document.getElementById('monthBurn').textContent = Math.round(monthRb + monthCig) + ' EUR';
+
+  // Weight
+  const w = parseFloat(document.getElementById('weightInput').value) || 91;
+  document.getElementById('toLose').textContent = '~' + Math.round(w - 76) + ' kg';
+  const weightPct = Math.max(0, Math.min(100, ((120 - w) / (120 - 76)) * 100));
+  document.getElementById('weightBar').style.width = weightPct + '%';
+
+  // Score
+  if (total < 0) total = 0;
+  document.getElementById('todayScore').textContent = total;
+  const maxScore = 68;
+  document.getElementById('scoreBar').style.width = Math.min(100, (total / maxScore) * 100) + '%';
+  document.getElementById('scoreBar').style.background = total >= 30 ? '#00e676' : total >= 15 ? '#ff9800' : '#e94560';
+
+  return total;
+}
+
+function renderHistory() {
+  const grid = document.getElementById('historyGrid');
+  grid.innerHTML = '';
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const key = 'laksi_' + d.toISOString().slice(0,10);
+    const data = localStorage.getItem(key);
+    const cell = document.createElement('div');
+    cell.className = 'day-cell';
+    cell.textContent = d.getDate();
+    if (data) {
+      const score = JSON.parse(data).score;
+      if (score >= 30) { cell.style.background = '#2e7d32'; cell.style.color = '#fff'; }
+      else if (score >= 15) { cell.style.background = '#1b5e20'; cell.style.color = '#ccc'; }
+      else if (score > 0) { cell.style.background = '#4a3f00'; cell.style.color = '#ccc'; }
+      else { cell.style.background = '#4a0000'; cell.style.color = '#ccc'; }
+      cell.title = d.toLocaleDateString('fr-FR') + ': ' + score + ' pts';
+    } else {
+      cell.style.background = '#1a1a2e';
+      cell.style.color = '#555';
+    }
+    grid.appendChild(cell);
+  }
+}
+
+function updateBankroll() {
+  let total = 0;
+  let consecutiveDays = 0;
+  const days = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key.startsWith('laksi_')) {
+      try {
+        const d = JSON.parse(localStorage.getItem(key));
+        total += d.score;
+        days.push({ date: d.date, score: d.score });
+      } catch(e) {}
+    }
+  }
+  // Count consecutive positive days from today backwards
+  days.sort((a, b) => b.date.localeCompare(a.date));
+  for (const d of days) {
+    if (d.score > 0) consecutiveDays++;
+    else break;
+  }
+
+  document.getElementById('bankroll').textContent = total + ' EUR';
+  document.getElementById('bankrollBar').style.width = Math.min(100, (total / 3000) * 100) + '%';
+  document.getElementById('buyins').textContent = Math.floor(total / 60) + ' / 50';
+  document.getElementById('positiveDays').textContent = consecutiveDays + ' jours';
+  if (total >= 3000 && consecutiveDays >= 90) {
+    document.getElementById('bankrollStatus').textContent = 'DEBLOQUE';
+    document.getElementById('bankrollStatus').className = 'green';
+  }
+}
+
+function saveDay() {
+  const score = updateScore();
+  const key = 'laksi_' + today.toISOString().slice(0,10);
+  const data = {
+    score: score,
+    redbull: parseInt(document.getElementById('redbullCount').value) || 0,
+    cigs: parseInt(document.getElementById('cigsCount').value) || 0,
+    water: parseFloat(document.getElementById('waterCount').value) || 0,
+    preg: parseInt(document.getElementById('pregCount').value) || 0,
+    weight: parseFloat(document.getElementById('weightInput').value) || 91,
+    bodyFat: parseFloat(document.getElementById('bfInput').value) || 33,
+    waterPct: parseFloat(document.getElementById('waterPctInput').value) || 50,
+    musclePct: parseFloat(document.getElementById('musclePctInput').value) || 54,
+    date: today.toISOString().slice(0, 10)
+  };
+  localStorage.setItem(key, JSON.stringify(data));
+  renderHistory();
+  updateBankroll();
+  alert('Journee sauvegardee !\n\nScore: ' + score + ' pts = ' + score + ' EUR\nBankroll: ' + document.getElementById('bankroll').textContent);
+}
+
+// Listeners
+['redbullCount','cigsCount','waterCount','pregCount','weightInput'].forEach(id => {
+  document.getElementById(id).addEventListener('input', updateScore);
+});
+
+function loadToday() {
+  const key = 'laksi_' + today.toISOString().slice(0,10);
+  const data = localStorage.getItem(key);
+  if (data) {
+    const d = JSON.parse(data);
+    document.getElementById('redbullCount').value = d.redbull || 0;
+    document.getElementById('cigsCount').value = d.cigs || 0;
+    document.getElementById('waterCount').value = d.water || 0;
+    document.getElementById('pregCount').value = d.preg || 0;
+    if (d.weight) document.getElementById('weightInput').value = d.weight;
+    if (d.bodyFat) document.getElementById('bfInput').value = d.bodyFat;
+    if (d.waterPct) document.getElementById('waterPctInput').value = d.waterPct;
+    if (d.musclePct) document.getElementById('musclePctInput').value = d.musclePct;
+  }
+}
+
+// Register service worker for PWA
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js');
+}
+
+loadToday();
+updateScore();
+renderHistory();
+updateBankroll();
+</script>
+</body>
+</html>
