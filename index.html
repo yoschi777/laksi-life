@@ -493,11 +493,11 @@ function autoSave() {
   // Sync to Google Sheets
   const checksDone = Object.entries(data.checks||{}).filter(([k,v])=>v==='done').map(([k])=>k).join(', ');
   const malusDone = Object.entries(data.checks||{}).filter(([k,v])=>v==='malus').map(([k])=>k).join(', ');
+  const syncData = {...data, checksDone, malusDone};
   fetch('https://script.google.com/macros/s/AKfycbxUuEbyDnRmL73lllo8cUx9mK8km_LoodeqwYF7uAIvcoMTKJOI_I3FJWKs9VeFuAEleQ/exec', {
     method: 'POST',
     mode: 'no-cors',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({...data, checksDone, malusDone})
+    body: JSON.stringify(syncData)
   }).catch(()=>{});
 
   showToast();
