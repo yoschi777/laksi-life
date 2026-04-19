@@ -504,13 +504,16 @@ function autoSave() {
   // Sync to Google Sheets
   const checksDone = Object.entries(data.checks||{}).filter(([k,v])=>v==='done').map(([k])=>k).join(', ');
   const malusDone = Object.entries(data.checks||{}).filter(([k,v])=>v==='malus').map(([k])=>k).join(', ');
-  // Sync to Google Sheets via GET (most reliable)
+  // Debounced sync to Google Sheets
+  clearTimeout(window._syncTimer);
+  window._syncTimer = setTimeout(function() {
   const params = new URLSearchParams({
     date: data.date, score: data.score, rb: data.redbull!==null?data.redbull:'',
     cigs: data.cigs!==null?data.cigs:'', water: data.water!==null?data.water:'', preg: data.preg!==null?data.preg:'',
     weight: data.weight, bf: data.bodyFat, mood: data.moodScore||''
   });
-  new Image().src = 'https://script.google.com/macros/s/AKfycbwfUbSOLV2FCyoZcgGBQLmQS6WgBohkGAIvxh8ix7uRhiz_Gn4Ng-lcemlmpJZfb231QQ/exec?' + params.toString();
+  new Image().src = 'https://script.google.com/macros/s/AKfycbwY1Y2mxkP3vdz1fmqnE9MLWwaNDJt60uU9XIA6cBV-BO_GPMoYEWz-Z1LDsLyMCbyGaw/exec?' + params.toString();
+  }, 10000);
 
   showToast();
   renderHistory();
